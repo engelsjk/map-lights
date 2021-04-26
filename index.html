@@ -1,0 +1,258 @@
+<html lang="en">
+
+<head>
+    <title>LIGHTS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="static/js/mapbox-gl.js"></script>
+    <link href="static/css/mapbox-gl.css" rel="stylesheet" />
+    <link rel="stylesheet" href="static/css/tachyons.min.css" />
+    <link rel="preload" as="font" href="static/fonts/Inter.var.woff2" type="font/woff2" crossorigin="anonymous" />
+    <style>
+        @font-face {
+            font-family: Inter var;
+            font-weight: 100 900;
+            font-style: normal;
+            font-named-instance: "Regular";
+            font-display: swap;
+            src: url(static/fonts/Inter.var.woff2) format("woff2")
+        }
+
+        html {
+            font-family: Inter var, sans-serif
+        }
+
+        .mapboxgl-ctrl-geocoder {
+            min-width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="flex flex-column vh-100">
+        <div id="header" class="flex-grow-0 bg-black-90 ph4">
+            <nav class="db dt-l w-100 pv2">
+                <h1 class="f3 tracked db dtc-l v-mid white w-100 w-50-l tc tl-l mb2 mb0-l pv2">LIGHTS</h1>
+            </nav>
+        </div>
+        <div class="flex-grow-1 flex" style="min-height:0">
+            <div id="sidebar" class="w-20 w-0-ns dn flex-ns overflow-y-scroll">
+                <div class="flex flex-grow-1">
+                    <div class="flex flex-column flex-grow-1">
+                        <div class="pa4 gray">
+                            <div class="f3 fw6 mb3">Find lights</div>
+                            <div class="lh-copy">Edit power lines in OSM</div>
+                        </div>
+                        <div class="f3 fw6 mt2 pl4 pt2 gray">Imagery</div>
+                        <span id="lights"
+                            class="layerbtn ph4 pv3 bg-black white db hover-black hover-bg-moon-gray link pointer mt2">Lights</span>
+                        <span id="dark"
+                            class="layerbtn ph4 pv3 bg-gray white db hover-black hover-bg-moon-gray link pointer mt2">Dark</span>
+                        <span id="satellite"
+                            class="layerbtn ph4 pv3 bg-gray white db hover-black hover-bg-moon-gray link pointer mt2">Satellite</span>
+                        <span id="editosm"
+                            class="ph4 pv3 bg-gray white db hover-black hover-bg-moon-gray link pointer mt5">Edit in
+                            OSM</span>
+                    </div>
+                </div>
+            </div>
+            <div class="w-80-l w-100 flex">
+                <div id="map" class="flex flex-grow-1"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        
+        mapboxgl.accessToken = '<<MAPBOX_ACCESS_TOKEN>>';
+
+        var bounds = [
+         [-127.5, 42.5], 
+         [-114.0, 51.3] 
+        ];
+
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/engelsjk/ck68vpfw31otl1is5gkc5f44e',
+            center: [-121.0854991, 47.3253851],
+            zoom: 6,
+            maxBounds: bounds,
+            hash: true
+        });
+
+        map.addControl(new mapboxgl.FullscreenControl());
+        map.addControl(new mapboxgl.NavigationControl());
+
+        map.on('load', function () {
+            addDataLayers();
+        })
+
+        expandLogoAttribution()
+		map.on('resize', e => {
+			expandLogoAttribution()
+		});
+
+        var callback = function () {
+            ////////////////////
+            // listeners
+            document.getElementById("dark").addEventListener("click", e => switchLayer(e.srcElement, "dark"));
+            document.getElementById("satellite").addEventListener("click", e => switchLayer(e.srcElement, "satellite"));
+            document.getElementById("lights").addEventListener("click", e => switchLayer(e.srcElement, "lights"));
+            document.getElementById("editosm").addEventListener("click", () => { btnOpenEditOSM(); });
+        };
+
+        if (
+            document.readyState === "complete" ||
+            (document.readyState !== "loading" && !document.documentElement.doScroll)
+        ) {
+            callback();
+        } else {
+            document.addEventListener("DOMContentLoaded", callback);
+        }
+
+        /////////////////////
+        // layer functions
+
+        function addDataLayers() {
+            map.addSource('power', {
+                type: "vector",
+                url: "mapbox://engelsjk.5x1xvdht"
+            });
+            map.addLayer({
+                "id": "powerlines",
+                "type": "line",
+                "source": "power",
+                "source-layer": "powerlines",
+                "layout": {},
+                "paint": {
+                    "line-color": "#11B4DA"
+                }
+            });
+            map.addLayer({
+                "id": "powerminorlines",
+                "type": "line",
+                "source": "power",
+                "source-layer": "powerminorlines",
+                "layout": {},
+                "paint": {
+                    "line-color": "#D2EDFC"
+                }
+            });
+            map.addLayer({
+                "id": "powercables",
+                "type": "line",
+                "source": "power",
+                "source-layer": "powerminorlines",
+                "layout": {},
+                "paint": {
+                    "line-color": "#FFF954"
+                }
+            });
+            map.addLayer({
+                "id": "powerplants-line",
+                "type": "line",
+                "source": "power",
+                "source-layer": "powerplants",
+                "layout": {},
+                "paint": {
+                    "line-color": "#FC4AFF"
+                }
+            });
+            map.addLayer({
+                "id": "powerplants-fill",
+                "type": "fill",
+                "source": "power",
+                "source-layer": "powerplants",
+                "paint": {
+                    "fill-color": "#FC4AFF",
+                    "fill-opacity": 0.5
+                }
+            });
+            map.addLayer({
+                "id": "powerplants-circle",
+                "type": "circle",
+                "source": "power",
+                "source-layer": "powerplants",
+                "paint": {
+                    "circle-color": "#000000",
+                    "circle-radius": 3
+                },
+                "filter": ["==", "$type", "Point"]
+            });
+            map.addLayer({
+                "id": "powersubstations",
+                "type": "line",
+                "source": "power",
+                "source-layer": "powersubstations",
+                "layout": {},
+                "paint": {
+                    "line-color": "#39FF14"
+                }
+            });
+            map.addLayer({
+                "id": "powersubstations-fill",
+                "type": "fill",
+                "source": "power",
+                "source-layer": "powersubstations",
+                "layout": {},
+                "paint": {
+                    "fill-color": "#39FF14",
+                    "fill-opacity": 0.5
+                }
+            });
+            map.addLayer({
+                "id": "powersubstations-circle",
+                "type": "circle",
+                "source": "power",
+                "source-layer": "powersubstations",
+                "paint": {
+                    "circle-color": "#39FF14",
+                    "circle-radius": 3
+                },
+                "filter": ["==", "$type", "Point"]
+            });
+        }
+
+        function switchLayer(el, style) {
+            if (el.classList.contains("bg-black")) {
+                return;
+            }
+
+            switch (style) {
+                case "dark":
+                    map.setStyle('mapbox://styles/mapbox/dark-v10');
+                    break;
+                case "satellite":
+                    map.setStyle('mapbox://styles/mapbox/satellite-v9');
+                    break;
+                case "lights":
+                    map.setStyle('mapbox://styles/engelsjk/ck68vpfw31otl1is5gkc5f44e');
+                    break;
+            };
+
+            var layerbtns = document.getElementsByClassName("layerbtn");
+            for (var i = 0; i < layerbtns.length; i++) {
+                layerbtns[i].classList.remove("bg-black");
+                layerbtns[i].classList.add("bg-gray");
+            }
+            el.classList.toggle("bg-gray");
+            el.classList.toggle("bg-black");
+        }
+
+        function expandLogoAttribution() {
+			document.getElementsByClassName("mapboxgl-ctrl-logo")[0].classList.remove('mapboxgl-compact');
+			document.getElementsByClassName("mapboxgl-ctrl-attrib")[0].classList.remove('mapboxgl-compact');
+		}
+
+        /////////////////////
+        // ctrl/btn functions
+
+        function btnOpenEditOSM() {
+            var zoom = Math.round(map.getZoom());
+            var center = map.getCenter();
+            var url = 'https://www.openstreetmap.org/edit?editor=id#map=' + `${zoom}/${center.lat}/${center.lng}`;
+            window.open(url);
+        }
+
+    </script>
+</body>
+
+</html>
