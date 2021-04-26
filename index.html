@@ -81,6 +81,11 @@
         map.addControl(new mapboxgl.FullscreenControl());
         map.addControl(new mapboxgl.NavigationControl());
 
+        map.addControl(new mapboxgl.AttributionControl({
+            compact: false,
+            customAttribution: "NASA/GSFC/Black Marble; OpenStreetMap"
+        }));
+
         map.on('load', function () {
             addDataLayers();
         })
